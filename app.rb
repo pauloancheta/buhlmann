@@ -61,18 +61,30 @@ HELIUM_COMPARTMENTS = {
 #
 # 1 ATM = 14.7 psia ( 1 Atmosphere, or sea level standard pressure )
 class Buhlmann
-  attr_reader :gas_mix, :depth, :exposure_time
+  attr_reader :gas_mix_percentage, :depth_in_meters, :exposure_time
 
-  def initialize(gas_mix:, depth:, exposure_time:)
-    @gas_mix = gas_mix
-    @depth = depth
+  def initialize(gas_mix_percentage:, depth_in_meters:, exposure_time:)
+    @gas_mix_percentage = gas_mix_percentage
+    @depth_in_meters = depth_in_meters
     @exposure_time = exposure_time
   end
 
   def call
-    (1..16).map do |compartment|
-      "#{compartment} -  comp #{p_comp(compartment)}, ambtol #{p_ambtol(compartment)}"
+    compartments = Hash.new({})
+
+    (1..16).each do |compartment|
+      ambtol = p_ambtol(compartment)
+      compartments[compartment] = { p_comp: p_comp(compartment), p_ambtol: ambtol, p_ambtol_meters: pressure_to_meters(ambtol) }
     end
+
+    compartments
+  end
+
+  private
+
+  # Pambtol = is the pressure you could drop to ( ATM )
+  def p_ambtol(compartment)
+    (p_comp(compartment) - a_modifier(compartment)) * b_modifier(compartment)
   end
 
   # Pcomp = Inert gas pressure in the mixture being breathed ( ATM )
@@ -80,16 +92,8 @@ class Buhlmann
     p_begin + (p_gas - p_begin) * (1 - 2**(-exposure_time / half_time(compartment)))
   end
 
-  # Pambtol = is the pressure you could drop to ( ATM )
-  def p_ambtol(compartment)
-    (p_comp(compartment) - a_modifier(compartment)) * b_modifier(compartment)
-  end
-
-  private
-
   def p_gas
-    atm = depth / 10 + 1
-    atm * p_begin
+    meters_to_pressure(depth_in_meters) * p_begin
   end
 
   def half_time(compartment)
@@ -97,7 +101,7 @@ class Buhlmann
   end
 
   def p_begin
-    1 - gas_mix
+    1 - gas_mix_percentage
   end
 
   # these value can also be taken from the nitrogen compartments a constant
@@ -111,6 +115,12 @@ class Buhlmann
   def b_modifier(compartment)
     1.005 - (half_time(compartment)**(-1 / 2.0))
   end
-end
 
-puts Buhlmann.new(gas_mix: 0.21, depth: 30, exposure_time: 10).call
+  def pressure_to_meters(pressure)
+    (pressure * 10) - 1
+  end
+
+  def meters_to_pressure(meters)
+    (meters / 10) + 1
+  end
+end

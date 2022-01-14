@@ -63,23 +63,20 @@ HELIUM_COMPARTMENTS = {
 # 1 ATM = 14.7 psia ( 1 Atmosphere, or sea level standard pressure )
 class Buhlmann
   include BaseCalculations
-  attr_reader :gas_mix_percentage, :depth_in_meters, :exposure_time
+  attr_reader :gas_mix_percentage, :depth_in_meters, :exposure_time, :compartments
 
   def initialize(gas_mix_percentage: 0.21, depth_in_meters:, exposure_time: 10)
     @gas_mix_percentage = gas_mix_percentage
     @depth_in_meters = depth_in_meters.to_f
     @exposure_time = exposure_time
+    @compartments = (1..16).map do |compartment|
+      ambtol = p_ambtol(compartment)
+      Compartment.new(compartment, p_comp(compartment), ambtol)
+    end
   end
 
-  def call
-    compartments = Hash.new({})
-
-    (1..16).each do |compartment|
-      ambtol = p_ambtol(compartment)
-      compartments[compartment] = { p_comp: p_comp(compartment), p_ambtol: ambtol, p_ambtol_meters: pressure_to_meters(ambtol) }
-    end
-
-    compartments
+  def deepest_tolerance
+    compartments.sort { |val| val.p_ambtol_meters }.last
   end
 
   private
@@ -116,5 +113,19 @@ class Buhlmann
   # b = 1.005 - ( tht ^ - 1/2 )
   def b_modifier(compartment)
     (1.005 - (half_time(compartment)**(-1 / 2.0)))
+  end
+
+  class Compartment
+    attr_reader :id, :p_comp, :p_ambtol
+
+    def initialize(id, p_comp, p_ambtol)
+      @id = id
+      @p_comp = p_comp
+      @p_ambtol = p_ambtol
+    end
+
+    def p_ambtol_meters
+      pressure_to_meters(p_ambtol)
+    end
   end
 end

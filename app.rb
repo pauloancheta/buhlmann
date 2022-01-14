@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 require 'pry'
+require_relative './base_calculations'
 
 # Basic Buhlmann decompression algorithm from:
 # https://web.archive.org/web/20100215060446/http://njscuba.net/gear/trng_10_deco.html
@@ -61,11 +62,12 @@ HELIUM_COMPARTMENTS = {
 #
 # 1 ATM = 14.7 psia ( 1 Atmosphere, or sea level standard pressure )
 class Buhlmann
+  include BaseCalculations
   attr_reader :gas_mix_percentage, :depth_in_meters, :exposure_time
 
-  def initialize(gas_mix_percentage:, depth_in_meters:, exposure_time:)
+  def initialize(gas_mix_percentage: 0.21, depth_in_meters:, exposure_time: 10)
     @gas_mix_percentage = gas_mix_percentage
-    @depth_in_meters = depth_in_meters
+    @depth_in_meters = depth_in_meters.to_f
     @exposure_time = exposure_time
   end
 
@@ -113,14 +115,6 @@ class Buhlmann
   # these value can also be taken from the nitrogen compartments b constant
   # b = 1.005 - ( tht ^ - 1/2 )
   def b_modifier(compartment)
-    1.005 - (half_time(compartment)**(-1 / 2.0))
-  end
-
-  def pressure_to_meters(pressure)
-    (pressure * 10) - 1
-  end
-
-  def meters_to_pressure(meters)
-    (meters / 10) + 1
+    (1.005 - (half_time(compartment)**(-1 / 2.0)))
   end
 end

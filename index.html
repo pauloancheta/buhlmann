@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>merp</title>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+  </head>
+  <body>
+    <div>
+      <h1>Dive Profile</h1>
+      <canvas id="myChart"></canvas>
+    </div>
+
+    <script type="text/javascript">
+      const labels = [
+        30, 40, 50, 60, 70
+      ];
+
+      const data = {
+        labels: labels,
+        datasets: [{
+          label: 'My First dataset',
+          backgroundColor: 'rgb(255, 99, 132)',
+          borderColor: 'rgb(255, 99, 132)',
+          data: [4.362338200388611, 5.815735970740432, 7.2691337410922525, 8.722531511444071, 10.175929281795893],
+        }]
+      };
+
+      const config = {
+        type: 'line',
+        data: data,
+        options: {}
+      };
+
+      const myChart = new Chart(
+        document.getElementById('myChart'),
+        config
+      );
+    </script>
+  </body>
+</html>

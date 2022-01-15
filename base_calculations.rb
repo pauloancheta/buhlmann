@@ -2,8 +2,6 @@
 
 module BaseCalculations
   def pressure_to_meters(pressure)
-    return 0 if pressure < 1
-
     (pressure - 1) * 30
   end
 

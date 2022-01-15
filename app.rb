@@ -65,13 +65,19 @@ class Buhlmann
   include BaseCalculations
   attr_reader :gas_mix_percentage, :depth_in_meters, :exposure_time, :compartments
 
-  def initialize(gas_mix_percentage: 0.21, depth_in_meters:, exposure_time: 10)
+  def initialize(gas_mix_percentage: 0.21,
+                 depth_in_meters:,
+                 exposure_time: 10,
+                 gf_low_percentage: 0.40,
+                 gf_high_percentage: 0.85)
     @gas_mix_percentage = gas_mix_percentage
     @depth_in_meters = depth_in_meters.to_f
     @exposure_time = exposure_time
+
     @compartments = (1..16).map do |compartment|
       ambtol = p_ambtol(compartment)
-      Compartment.new(compartment, p_comp(compartment), ambtol)
+      Compartment.new(compartment, p_comp(compartment), ambtol,
+                      gf_low_percentage, gf_high_percentage)
     end
   end
 
@@ -116,16 +122,39 @@ class Buhlmann
   end
 
   class Compartment
-    attr_reader :id, :p_comp, :p_ambtol
+    include BaseCalculations
+    attr_reader :id, :p_comp, :p_ambtol, :gf_low, :gf_high
 
-    def initialize(id, p_comp, p_ambtol)
+    def initialize(id, p_comp, p_ambtol, gf_low, gf_high)
       @id = id
       @p_comp = p_comp
       @p_ambtol = p_ambtol
+      @gf_low = 1 - gf_low + 1
+      @gf_high = 1 - gf_high + 1
     end
 
     def p_ambtol_meters
-      pressure_to_meters(p_ambtol)
+      ans = pressure_to_meters(p_ambtol)
+      ans < 0 ? 0 : ans
+    end
+
+    def gf_low_tol
+      p_ambtol * gf_low
+    end
+
+    def gf_high_tol
+      p_ambtol * gf_high
+    end
+
+    def gf_low_tol_meters
+      return 0 if p_ambtol_meters < 0
+      p_ambtol_meters * gf_low
+    end
+
+    def gf_high_tol_meters
+      return 0 if p_ambtol_meters < 0
+
+      p_ambtol_meters * gf_high
     end
   end
 end

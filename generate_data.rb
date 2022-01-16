@@ -1,84 +1,68 @@
 # frozen_string_literal: true
 
-require_relative './app'
+require_relative './profile'
 require 'pry'
 
-# ascent rate of 9m per min
-include BaseCalculations
+COLORS = %w|
+  #4FFA93
+  #86C1CA
+  #113315
+  #327152
+  #B4EEE6
+  #5C51C0
+  #B96943
+  #F9BFCD
+  #09A8FF
+  #46FC07
+  #750E36
+  #94C66A
+  #636459
+  #182423
+  #D07D07
+|
 
-ascent_rate_per_min = 10
-descent_rate_per_min = 30
+collection = Profile.new(
+  time_at_depth: 30,
+  deepest_depth_meters: 40,
+  shallowest_stop_meters: 3,
+  gas_mix_percentage: 0.28,
+  gf_low_percentage: 1,
+  gf_high_percentage: 1
+).run
 
-current_time = 0
-time_at_depth = 30
-deepest = 40.0
-shallowest_stop = 3
-mix_percent = 0.28
+full_string_array = []
+full_string_array << "const labels = [#{collection.keys.join(",")}]"
 
-# stp time run
-# 40 bot 30
-# 12 asc 33
-# 12 2 35
-# 9 3 38
-# 6 6 44
-# 3 15 59
-
-current = 0
-current_average = 0
-
-# puts "begin descent"
-while current < deepest
-  current_time += 1
-  current_average = (((current_average * current_time) + current) / (current_time + 1)).round(2)
-  obj =  Buhlmann.new(gas_mix_percentage: mix_percent,
-                      depth_in_meters: current_average,
-                      exposure_time: current_time).deepest_tolerance
-  tolerance = obj.p_ambtol_meters
-
-  if !((current + descent_rate_per_min) > deepest)
-    current += descent_rate_per_min
-  else
-    current = deepest
-  end
-
-  puts "run: #{current_time} current_depth: #{current}m, tol_m: #{tolerance.round(2)} low/high: #{obj.gf_low_tolerance_meters}/#{obj.gf_high_tolerance_meters}"
-  # print "#{ current }, "
-
-end
-
-# puts "stay at depth"
-while current_time < time_at_depth
-  obj =  Buhlmann.new(gas_mix_percentage: mix_percent,
-                      depth_in_meters: current_average,
-                      exposure_time: current_time).deepest_tolerance
-  tolerance = obj.p_ambtol_meters
-
-  puts "run: #{current_time} current_depth: #{current}m, tol_m: #{tolerance.round(2)} low/high: #{obj.gf_low_tolerance_meters}/#{obj.gf_high_tolerance_meters}"
-  # print "#{ current }, "
-
-  current_time += 1
-  current_average = (((current_average * current_time) + current) / (current_time + 1)).round(2)
-end
-
-# puts "begin ascent"
-while current.positive?
-  obj =  Buhlmann.new(gas_mix_percentage: mix_percent,
-                      depth_in_meters: current_average,
-                      exposure_time: current_time).deepest_tolerance
-  tolerance = obj.p_ambtol_meters
-
-  if tolerance < (current - 3)
-    if tolerance > (current - ascent_rate_per_min)
-      current = tolerance.round if tolerance.round >= shallowest_stop
+hash = Hash.new()
+collection.each do |key, compartments|
+  compartments.compartments.each do |compartment|
+    if hash[compartment.id].nil?
+      hash[compartment.id] = [compartment.p_ambtol_meters]
     else
-      current -= ascent_rate_per_min
+      hash[compartment.id] << compartment.p_ambtol_meters
     end
   end
-
-  puts "run: #{current_time} current_depth: #{current}m, tol_m: #{tolerance.round(2)} low/high: #{obj.gf_low_tolerance_meters}/#{obj.gf_high_tolerance_meters}"
-  # print "#{ current }, "
-
-  break if tolerance < 1
-  current_time += 1
-  current_average = (((current_average * current_time) + current) / (current_time + 1)).round(2)
 end
+
+full_string_array << "const datasets = ["
+hash.each do |key, value|
+  full_string_array << """  { label: '#{key}', backgroundColor: '#{COLORS[key]}', borderColor: '#{COLORS[key]}', data: [#{value.join(",")}] },"""
+end
+
+full_string_array << "]"
+
+full_string_array << """
+const data = {
+  labels: labels,
+  datasets: datasets
+};
+
+const myChart = new Chart(
+  document.getElementById('myChart'),
+  { type: 'line', data: data, options: {} }
+);
+"""
+
+path_to_file = './assets/javascript/populate_chart.js'
+File.delete(path_to_file) if File.exist?(path_to_file)
+File.write(path_to_file, full_string_array.join("\n"))

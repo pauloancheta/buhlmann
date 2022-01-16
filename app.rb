@@ -82,7 +82,7 @@ class Buhlmann
   end
 
   def deepest_tolerance
-    compartments.sort { |val| val.p_ambtol_meters }.last
+    compartments.sort { |a, b| a.p_ambtol <=> b.p_ambtol }.last
   end
 
   private
